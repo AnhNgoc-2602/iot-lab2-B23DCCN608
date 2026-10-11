@@ -1,6 +1,6 @@
 # Bài thực hành 2: Thu thập, lưu trữ và tiền xử lý dữ liệu IoT
 
-- Sinh viên: [Họ tên] | Mã SV: B23DCCN608 | Lớp: [lớp]
+- Sinh viên: Nguyễn Thị Anh Ngọc | Mã SV: B23DCCN608 
 - Học phần: IoT và Ứng dụng (INT14149)
 
 ## 1. Tổng quan
@@ -25,7 +25,7 @@ Tài khoản miễn phí: Wokwi, Google Colab, InfluxDB Cloud (gói Free), Grafa
 3. Sửa `INFLUX_URL`, `INFLUX_ORG` nếu dùng tài khoản khác (xem `config/config.example.env`).
 
 ## 5. Cách chạy
-1. Mở dự án Wokwi: [dán link Wokwi]. Kiểm tra `SITE = "B23DCCN608"` trong sketch, bấm ▶.
+1. Mở dự án Wokwi:(https://wokwi.com/projects/477547492335922177). Kiểm tra `SITE = "B23DCCN608"` trong sketch, bấm ▶.
 2. Mở Google Colab, tạo notebook mới, thêm secret `INFLUX_TOKEN`.
 3. Ô 1: `!pip -q install paho-mqtt influxdb-client`
 4. Ô 2: dán nội dung `src/collector.py` và chạy (mặc định thu thập 5 phút). Trong lúc chạy, đổi giá trị cảm biến trên Wokwi, thỉnh thoảng cho một giá trị bất thường.
