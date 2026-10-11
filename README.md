@@ -1,42 +1,49 @@
 # Bài thực hành 2: Thu thập, lưu trữ và tiền xử lý dữ liệu IoT
 
-Sinh viên: <Họ tên> | MSSV: B23DCCN608 | Học phần: IoT và Ứng dụng (INT14149)
+- Sinh viên: [Họ tên] | Mã SV: B23DCCN608 | Lớp: [lớp]
+- Học phần: IoT và Ứng dụng (INT14149)
 
-## Mô tả
-Pipeline IoT chạy hoàn toàn trên nền tảng web: ESP32 mô phỏng (Wokwi) đo nhiệt độ,
-độ ẩm, khoảng cách và gửi JSON qua MQTT. Collector Python (Google Colab) nhận, kiểm tra
-hợp lệ rồi ghi vào InfluxDB Cloud. Dữ liệu thô được tiền xử lý rồi hiển thị trên Grafana.
+## 1. Tổng quan
+Pipeline: ESP32 (Wokwi: DHT22 + HC-SR04) → MQTT (broker.hivemq.com) → Collector Python → InfluxDB Cloud (`iot_raw`) → Tiền xử lý (pandas) → InfluxDB Cloud (`iot_processed`) → Grafana Cloud.
 
-Luồng dữ liệu:
-Wokwi (ESP32) -> broker.hivemq.com -> Colab collector -> InfluxDB (iot_raw)
--> Colab tiền xử lý -> InfluxDB (iot_processed) -> Grafana Cloud
+## 2. Cấu trúc thư mục
+| Thư mục / file | Nội dung |
+|---|---|
+| `firmware/` | Mã ESP32 chạy trên Wokwi: `sketch.ino`, `diagram.json`, `libraries.txt` |
+| `src/collector.py` | Subscribe MQTT, validate, ghi InfluxDB, đo độ trễ |
+| `src/preprocess.py` | Làm sạch (IQR), resample, nội suy, rolling mean, delta, chuẩn hóa |
+| `src/latency_report.py` | Thống kê độ trễ (mean, median, P95, P99) và vẽ biểu đồ |
+| `config/config.example.env` | Mẫu cấu hình (không chứa token) |
+| `requirements.txt` | Thư viện Python |
 
-## Cấu trúc thư mục
-- `firmware/`: mã ESP32 (sketch.ino, diagram.json, libraries.txt)
-- `src/collector.py`: subscribe MQTT, validate, ghi InfluxDB
-- `src/preprocess.py`: làm sạch, phát hiện outlier, resample, chuẩn hóa
-- `src/latency_report.py`: đo độ trễ end-to-end
-- `config/config.example.env`: mẫu cấu hình (không chứa token)
+## 3. Yêu cầu
+Tài khoản miễn phí: Wokwi, Google Colab, InfluxDB Cloud (gói Free), Grafana Cloud. Không cần cài phần mềm nào. Thư viện Python: xem `requirements.txt`.
 
-## Tài khoản cần có
-Wokwi, Google (Colab), InfluxDB Cloud (gói Free), Grafana Cloud (gói Free).
-Broker công cộng HiveMQ không cần tài khoản.
+## 4. Cấu hình InfluxDB Cloud
+1. Tạo bucket `iot_raw` (retention 7 ngày) và `iot_processed` (retention 30 ngày).
+2. Tạo API token (All Access). Lưu vào Colab Secrets tên `INFLUX_TOKEN` (hoặc biến môi trường `INFLUX_TOKEN`). **Không ghi token vào mã nguồn.**
+3. Sửa `INFLUX_URL`, `INFLUX_ORG` nếu dùng tài khoản khác (xem `config/config.example.env`).
 
-## Cách chạy
-1. InfluxDB Cloud: tạo bucket `iot_raw` (retention 7 ngày) và `iot_processed`
-   (retention 30 ngày), tạo API token.
-2. Colab: mở khóa Secrets, thêm secret `INFLUX_TOKEN` và bật Notebook access.
-3. Wokwi: mở dự án (link bên dưới), kiểm tra `SITE = "B23DCCN608"`, bấm Run.
-4. Colab: cài thư viện `pip install paho-mqtt influxdb-client`, sửa `INFLUX_URL`,
-   `ORG` trong `src/collector.py`, chạy file này (thu thập 15 phút).
-5. Trong lúc đó đổi giá trị cảm biến trên Wokwi để có dữ liệu thay đổi và vài giá trị bất thường.
-6. Chạy `src/preprocess.py` rồi `src/latency_report.py`.
-7. Grafana: thêm data source InfluxDB (Flux) và dựng dashboard.
+## 5. Cách chạy
+1. Mở dự án Wokwi: [dán link Wokwi]. Kiểm tra `SITE = "B23DCCN608"` trong sketch, bấm ▶.
+2. Mở Google Colab, tạo notebook mới, thêm secret `INFLUX_TOKEN`.
+3. Ô 1: `!pip -q install paho-mqtt influxdb-client`
+4. Ô 2: dán nội dung `src/collector.py` và chạy (mặc định thu thập 5 phút). Trong lúc chạy, đổi giá trị cảm biến trên Wokwi, thỉnh thoảng cho một giá trị bất thường.
+5. Ô 3: dán `src/preprocess.py` và chạy để tạo dữ liệu sạch trong `iot_processed`.
+6. Ô 4: dán `src/latency_report.py` và chạy để xem thống kê độ trễ.
+7. Dashboard Grafana: kết nối data source InfluxDB (Flux), tạo panel từ bucket `iot_raw` và `iot_processed`.
 
-## Bảo mật
-Token chỉ lưu trong Colab Secrets, không có trong mã nguồn.
+## 6. Quy ước dữ liệu
+- Topic: `iot/B23DCCN608/esp32-01/telemetry`
+- JSON: `{"device_id","seq","ts","temperature","humidity","distance_cm","rssi","uptime_s"}`
+- InfluxDB: measurement `sensor_data` (thô) và `sensor_clean` (đã xử lý); tags `device_id`, `site`.
+
+## 7. Lưu ý
+- Không đẩy token hoặc mật khẩu lên GitHub.
+- Broker HiveMQ công cộng không mã hóa, chỉ dùng cho thực hành.
+- Độ trễ đo từ Wokwi bị ảnh hưởng bởi lệch đồng hồ mô phỏng (xem báo cáo).
 
 ## Liên kết
 - Dự án Wokwi: https://wokwi.com/projects/477547492335922177
 - Dashboard Grafana: [<dán link>](https://blueoak2346.grafana.net/d/antzgg7/bai2-iot-monitoring-b23dccn608?from=2026-10-11T01:30:00.000Z&to=2026-10-11T02:30:59.000Z&timezone=browser&var-filter0=&refresh=5s)
-- Báo cáo:  https://docs.google.com/document/d/1dbgEJqVQAJxA2S2J3FrV7PXS0qo7ccIakitiMm9AGvM/edit?tab=t.0
+
